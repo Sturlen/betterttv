@@ -1,0 +1,12 @@
+.bttv-highlighted {
+    display: flex;
+    flex-direction: row;
+}
+
+.chat-msg-icon {
+    width: 2.8rem;
+    height: 2.8rem;
+    flex: none;
+    display: inline-block;
+    margin-inline-end: 5px;
+}
