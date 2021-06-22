@@ -1,12 +1,121 @@
-.bttv-highlighted {
-    display: flex;
-    flex-direction: row;
+:root {
+    --custom-avatar-size: 3.8rem;
+    --custom-badge-width: 0.4rem;
+    --custom-left-padding: 0.5rem;
+    --custom-message-padding: calc(var(--custom-avatar-size) + var(--custom-left-padding));
 }
 
+
+   
 .chat-msg-icon {
     width: 2.8rem;
     height: 2.8rem;
     flex: none;
     display: inline-block;
-    margin-inline-end: 5px;
+}
+
+.ffz-badge[data-badge] {
+    min-width: var(--custom-badge-width);
+    width: var(--custom-badge-width);
+    height: auto;
+}
+
+.ffz-badge[data-badge][data-version][data-provider="twitch"] {
+    background-repeat: no-repeat;
+}
+
+.ffz-badge[data-badge="moderator"][data-version="1"][data-provider="twitch"] {
+    background-color: rgb(0,173,3);
+    background-image: none;
+}
+
+.ffz-badge[data-badge="vip"][data-version="1"][data-provider="twitch"] {
+    background-color: rgb(224,5,185);
+    background-image: none;
+}
+
+.ffz-badge[data-badge="broadcaster"][data-version="1"][data-provider="twitch"] {
+    background-color:rgb(233,25,22);
+    background-image: none;
+}
+
+.ffz-badge[data-badge="partner"][data-version="1"][data-provider="twitch"] {
+    background-color: rgb(145,70,255);
+    background-image: none;
+}
+
+.ffz-badge[data-badge="staff"][data-version="1"][data-provider="twitch"] {
+    background-color: rgb(89,89,89);
+    background-image: none;
+}
+
+.ffz-badge[data-badge="subscriber"][data-version][data-provider="twitch"] {
+    background-color: yellow!important;
+    background-image: none;
+    order: 10;
+
+    min-width: var(--custom-badge-width);
+    width: var(--custom-badge-width);
+    height: auto;
+}
+
+.ffz-badge[data-badge="predictions"] {
+    width: 2.8rem;
+    height: 2.8rem;
+}
+
+.ffz-badge[data-badge="avatar"] {
+    height: var(--custom-avatar-size);
+    width: var(--custom-avatar-size);
+    position: absolute;
+
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: calc(var(--custom-avatar-size) * 1.1);
+    order: -10;
+}
+
+.chat-line__message--badges {
+    display: inline-flex;
+    flex-direction: row;
+    max-width: -webkit-fit-content;
+    max-width: -moz-fit-content;
+    max-width: fit-content;
+    vertical-align: middle;
+    min-width: 1rem;
+    min-height: 2rem;
+}
+
+.chat-scrollable-area__message-container {
+    top: -4rem;
+    position: relative;
+}
+
+.custom-avatar {
+    background-color: inherit;
+    padding: .5rem .5rem;
+}
+
+.custom-avatar .ffz-badge[data-badge="avatar"] {
+    left: .5rem;
+}
+
+.custom-avatar .chat-line__message--badges {
+    padding-left: var(--custom-message-padding);
+    margin-bottom: 1rem;
+}
+
+.custom-avatar .chat-line__username {
+    vertical-align: top;
+}
+
+.custom-avatar .message {
+    display: block;
+    position: relative;
+    left: var(--custom-message-padding);
+    width: calc(100% - var(--custom-message-padding));
+}
+
+.custom-avatar [aria-hidden="true"] {
+    display: none;
 }
