@@ -56,10 +56,10 @@ class ChatEmphasisModule {
 
         settings.on('changed.chatEmphasis', this.toggleChatEmphasis);
         settings.on('changed.chatIcons', this.toggleChatIcons);
-        // watcher.on('load', this.togglePrimePromotions);
+        watcher.on('load', this.onLoad);
         // watcher.on('load.chat', () => this.loadChat());
         // watcher.on('load.vod', () => this.loadChat());
-        watcher.on('chat.message', ($message, messageObj) => this.onMessage($message, messageObj));
+        watcher.on('chat.message', ($message, messageObj) => this.onLiveMessage($message, messageObj));
         watcher.on('vod.message', ($message) => this.onVODMessage($message));
     }
 
@@ -67,59 +67,67 @@ class ChatEmphasisModule {
 
     toggleChatIcons() { }
 
-    //   togglePrimePromotions() {
-    //     $('body').toggleClass('bttv-chat-emphasis', settings.get('chatEmphasis'));
-    //   }
-
-    async onMessage($message, { user, timestamp, messageParts }) {
-        const from = user.userLogin;
-        const message = messageTextFromAST(messageParts);
-        
-        const date = new Date(timestamp);
-
-        const is_mod = user.userType === "mod"
-
-        const currentChannel = twitch.getCurrentChannel();
-        const icon_url = await viewerCardQuery(currentChannel, from)
-
-        this.addAvatar($message, user, icon_url)
-        if (is_mod) {
-
-        }
-
-        //console.log(user, message, $message)
-
+    onLoad() {
+        clearAvatarCache()
     }
 
-    onVODMessage($message) {
-        const $from = $message.find(VOD_CHAT_FROM_SELECTOR);
+    async onLiveMessage($message, { user, timestamp, messageParts }) {
+        const from = user.userLogin;
+        const message_text = messageTextFromAST(messageParts);
+        
+
+        //const date = new Date(timestamp);
+
+        
+        const use_avatar = isImportant($message)
+
+        if (use_avatar) {
+
+            if (!inAvatarCache(from)) {
+                const currentChannel = twitch.getCurrentChannel();
+                const icon_url = await viewerCardQuery(currentChannel, from)
+                addStyleSheet(`.custom-badge[data-user="${from}"] { background-image: url(${icon_url}); }`)
+                addToAvatarCache(from)
+            }
+            this.addAvatar($message, from)
+        }
+
+        const roles = queryRoles($message)
+        this.onMessage({ from, roles, message_text })
+    }
+
+    async onVODMessage($message) {
+        const $from = $message.find(".video-chat__message-author");
         const from = ($from.attr('href') || '').split('?')[0].split('/').pop();
-        const $messageContent = $message.find(VOD_CHAT_MESSAGE_SELECTOR);
-        const emotes = Array.from($messageContent.find(VOD_CHAT_MESSAGE_EMOTE_SELECTOR)).map((emote) =>
+        const $message_text = $message.find(".video-chat__message .message");
+        const emotes = Array.from($message_text.find(".chat-line__message--emote")).map((emote) =>
             emote.getAttribute('alt')
         );
-        const messageContent = `${$messageContent.text().replace(/^:/, '')} ${emotes.join(' ')}`;
+        const message_text = `${$message_text.text().replace(/^:/, '')} ${emotes.join(' ')}`;
 
-        if (fromContainsKeyword(blacklistUsers, from) || messageContainsKeyword(blacklistKeywords, from, messageContent)) {
-            this.markBlacklisted($message);
-            return;
+        const should_highlight = isImportant($message)
+
+        if (should_highlight) {
+            this.addHighlight($message)
         }
 
-        if (fromContainsKeyword(highlightUsers, from) || messageContainsKeyword(highlightKeywords, from, messageContent)) {
-            this.addAvatar($message);
-
-        }
+        const roles = queryRoles($message)
+        this.onMessage({ from, roles, message_text })
     }
 
-    addAvatar($message, { userID, userLogin }, icon_url = `https://static-cdn.jtvnw.net/jtv_user_pictures/bddfee49-ab08-40c4-b2af-2839503162bc-profile_image-70x70.png`) {
+    onMessage({ from, roles, message_text }) {
+        console.log(from, roles, message_text)
+
+    }
+
+    addAvatar($message, userLogin, icon_url = `https://static-cdn.jtvnw.net/jtv_user_pictures/bddfee49-ab08-40c4-b2af-2839503162bc-profile_image-70x70.png`) {
 
         const $icon = $('<span></span>')
             .addClass("ffz-badge custom-badge")
-            .attr('style', `background-image: url(${icon_url});`)
             .attr("data-badge", "avatar")
             .attr("data-provider", "custom")
             .attr("data-user", userLogin)
-            .attr("data-user-id", userID)
+        //.attr('style', `background-image: url(${icon_url});`)
 
         $message.addClass('custom-avatar')
         const badges = $message.find(".chat-line__message--badges")
@@ -130,7 +138,8 @@ class ChatEmphasisModule {
 
     addHighlight($message) {
 
-        $message.addClass('bttv-highlighted')
+        $message.addClass('highlight-message')
+        $message.addClass('ffz-notice-line')
 
         return $message
     }
@@ -142,3 +151,69 @@ class ChatEmphasisModule {
 }
 
 export default new ChatEmphasisModule();
+
+function queryRoles($message) {
+    const hasRole = (role) => msgHasRole($message, role);
+    const roles = {
+        moderator: hasRole("moderator"),
+        subscriber: hasRole("subscriber"),
+        vip: hasRole("vip"),
+        streamer: hasRole("broadcaster"),
+        partner: hasRole("partner"),
+        staff: hasRole("staff"),
+    };
+    return roles;
+}
+
+function isImportant($message) {
+    
+    const currentChannel = twitch.getCurrentChannel()
+    
+    const roles = queryRoles($message)
+    const has_important_role = roles.vip || roles.partner || roles.staff || roles.streamer || roles.moderator
+
+    const is_special_user = false
+
+    const is_special_channel = false
+
+    const decision = has_important_role || has_important_role || is_special_channel
+
+    return decision
+}
+
+
+
+function msgHasRole($message, role = "") {
+    let badge = false
+    try {
+        badge = !!$message.find(`.ffz-badge[data-badge="${role}"]`).length
+    } catch (error) {
+        console.error("Error finding badges", error)
+    }
+
+    return badge
+}
+
+
+function addStyleSheet(style = "") {
+    var sheet = document.createElement('style')
+    sheet.innerHTML = style;
+    document.body.appendChild(sheet);
+    return sheet
+}
+
+function clearAvatarCache() {
+    delete window.__custom_avatar_cache
+}
+
+function addToAvatarCache(userLogin) {
+    if (!window.__custom_avatar_cache) {
+        window.__custom_avatar_cache = []
+    }
+    window.__custom_avatar_cache.push(userLogin)
+}
+
+function inAvatarCache(userLogin) {
+    return !!window.__custom_avatar_cache?.includes(userLogin)
+
+}
