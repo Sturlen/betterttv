@@ -38,6 +38,14 @@ function messageTextFromAST(ast) {
         .join(' ');
 }
 
+const attribs = {
+    special_status: "data-custom-special"
+}
+
+function getSpecialStatus() {
+    return $("body").get()[0].getAttribute(attribs.special_status)
+}
+
 class ChatEmphasisModule {
     constructor() {
         settings.add({
@@ -57,8 +65,8 @@ class ChatEmphasisModule {
         settings.on('changed.chatEmphasis', this.toggleChatEmphasis);
         settings.on('changed.chatIcons', this.toggleChatIcons);
         watcher.on('load', this.onLoad);
-        // watcher.on('load.chat', () => this.loadChat());
-        // watcher.on('load.vod', () => this.loadChat());
+        //watcher.on('load.chat', () => this.onLoad("chat"));
+        //watcher.on('load.vod', () => this.onLoad("vod"));
         watcher.on('chat.message', ($message, messageObj) => this.onLiveMessage($message, messageObj));
         watcher.on('vod.message', ($message) => this.onVODMessage($message));
     }
@@ -68,6 +76,7 @@ class ChatEmphasisModule {
     toggleChatIcons() { }
 
     onLoad() {
+        updateSpecialStatus();
         clearAvatarCache()
     }
 
@@ -152,6 +161,18 @@ class ChatEmphasisModule {
 
 export default new ChatEmphasisModule();
 
+function updateSpecialStatus() {
+    const current_channel_obj = twitch.getCurrentChannel();
+
+    const channel_name = current_channel_obj?.name.toLowerCase();
+
+    const special_channels = ["minosura", "tommy_g_", "izzyyshika"];
+
+    const is_special = special_channels.includes(channel_name);
+
+    $("body").attr(attribs.special_status, is_special || null);
+}
+
 function queryRoles($message) {
     const hasRole = (role) => msgHasRole($message, role);
     const roles = {
@@ -165,16 +186,13 @@ function queryRoles($message) {
     return roles;
 }
 
-function isImportant($message) {
-    
-    const currentChannel = twitch.getCurrentChannel()
-    
+function isImportant($message) { 
     const roles = queryRoles($message)
     const has_important_role = roles.vip || roles.partner || roles.staff || roles.streamer || roles.moderator
 
     const is_special_user = false
 
-    const is_special_channel = false
+    const is_special_channel = getSpecialStatus()
 
     const decision = has_important_role || has_important_role || is_special_channel
 
