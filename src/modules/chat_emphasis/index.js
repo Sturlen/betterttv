@@ -4,6 +4,8 @@ import watcher from '../../watcher.js';
 import twitch from '../../utils/twitch.js';
 import { viewerCardQuery } from './viewercard.js';
 
+import {FavoriteChannels, FavoriteUsers} from './favorites.js'
+
 const default_user = {
     color: "#1E90FF",
     displayName: "TheAntMeme",
@@ -39,11 +41,20 @@ function messageTextFromAST(ast) {
 }
 
 const attribs = {
-    special_status: "data-custom-special"
+    special_channel_status: "data-custom-schannel",
+    special_user_status: "data-custom-suser"
 }
 
-function getSpecialStatus() {
-    return $("body").get()[0].getAttribute(attribs.special_status)
+function isSpecialChannel() {
+    const body_el = $("body").get()[0]
+    const status = body_el.getAttribute(attribs.special_channel_status)
+    return !!status
+}
+
+function isSpecialuser($live_or_vod_msg) {
+    const message_el = $live_or_vod_msg.get()[0]
+    const status = message_el.getAttribute(attribs.special_user_status)
+    return !!status
 }
 
 class ChatEmphasisModule {
@@ -83,15 +94,16 @@ class ChatEmphasisModule {
     async onLiveMessage($message, { user, timestamp, messageParts }) {
         const from = user.userLogin;
         const message_text = messageTextFromAST(messageParts);
-        
-
-        //const date = new Date(timestamp);
 
         
+
+        const is_special = FavoriteUsers.includes(from)
+
+        $message.attr(attribs.special_user_status, is_special || null)
+     
         const use_avatar = isImportant($message)
 
         if (use_avatar) {
-
             if (!inAvatarCache(from)) {
                 const currentChannel = twitch.getCurrentChannel();
                 const icon_url = await viewerCardQuery(currentChannel, from)
@@ -165,12 +177,9 @@ function updateSpecialStatus() {
     const current_channel_obj = twitch.getCurrentChannel();
 
     const channel_name = current_channel_obj?.name.toLowerCase();
+    const is_special = FavoriteChannels.includes(channel_name)
 
-    const special_channels = ["minosura", "tommy_g_", "izzyyshika"];
-
-    const is_special = special_channels.includes(channel_name);
-
-    $("body").attr(attribs.special_status, is_special || null);
+    $("body").attr(attribs.special_channel_status, is_special || null);
 }
 
 function queryRoles($message) {
@@ -188,13 +197,8 @@ function queryRoles($message) {
 
 function isImportant($message) { 
     const roles = queryRoles($message)
-    const has_important_role = roles.vip || roles.partner || roles.staff || roles.streamer || roles.moderator
-
-    const is_special_user = false
-
-    const is_special_channel = getSpecialStatus()
-
-    const decision = has_important_role || has_important_role || is_special_channel
+    const hasImportantRole = () => roles.vip || roles.partner || roles.staff || roles.streamer || roles.moderator
+    const decision = isSpecialChannel() || isSpecialuser($message) || hasImportantRole()
 
     return decision
 }
@@ -235,3 +239,6 @@ function inAvatarCache(userLogin) {
     return !!window.__custom_avatar_cache?.includes(userLogin)
 
 }
+
+window._users = FavoriteUsers
+window._channels = FavoriteChannels
