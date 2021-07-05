@@ -87,7 +87,7 @@ class ChatEmphasisModule {
     toggleChatIcons() { }
 
     onLoad() {
-        updateSpecialStatus();
+        updateSpecialTag();
         clearAvatarCache()
     }
 
@@ -173,7 +173,7 @@ class ChatEmphasisModule {
 
 export default new ChatEmphasisModule();
 
-function updateSpecialStatus() {
+function updateSpecialTag() {
     const current_channel_obj = twitch.getCurrentChannel();
 
     const channel_name = current_channel_obj?.name.toLowerCase();
